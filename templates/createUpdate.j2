@@ -1,0 +1,421 @@
+{% extends "main.j2" %}
+
+{% block title %}38C - Database Administration{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+
+{#  1.1 Set Heading for all create/update pages  #}
+{# ---------------------------------------------- #}
+{% set createUpdateHeading %}
+{% if operation == "create" %}
+<h3>{{operation.capitalize()}} new {{dbEntity[:-1]}}</h3>
+    <p>Please enter information below to create new {{dbEntity[:-1]}}.</p>
+    <form action="/{{dbEntity}}/create" method="POST">
+{% elif operation == "update" %}
+<h3>{{operation.capitalize()}} existing {{dbEntity[:-1]}}</h3>
+    <p>Please enter information below to update existing {{dbEntity[:-1]}}.</p>
+    <form action="/{{dbEntity}}/update" method="POST">   
+{% endif %}
+{% endset %}
+
+{#  1.2 Set addEditItemsContainer for purchases  #}
+{# ---------------------------------------------- #}
+{% set addEditItemsContainer %}
+    {# https://stackoverflow.com/questions/3842614/how-do-i-call-a-javascript-function-on-page-load #}
+    {% if operation == "update" %}
+        {% if updated == False %}
+            <script>
+            function loadExistingItems(){addFields({{existingItems}},{{formPrefillData['inventoryItems']}})};
+            window.onload=loadExistingItems;
+            </script>
+        {% endif %}
+    {% endif %}
+    <div class="form-row">
+        <div class="col-3">
+            <button type="button" class="btn btn-outline-primary" id="addItems" onclick="addFields(0,{{formPrefillData['inventoryItems']}})" style:"min-width: 200px">Add items</a>
+        </div>
+        <div class="col-3">
+            <a href="" onClick="window.location.reload(true)" class="btn btn-outline-danger" id="addStartOver" style:"min-width: 200px">Start Over</a>
+        </div>
+    </div>
+    <div id="itemsContainer" class="form-group" style="padding: 10px">
+    </div>
+
+{% endset %}
+
+{#  2.1 create / update employee forms #} 
+{# ---------------------------------------------- #}
+{% set createUpdateEmployeesForm %}
+    <div class="form-row">
+        {#  Pre-fill values when called to update  #}
+        {% if operation == "update" %}
+            <div class="col-2">
+                <label for="eeId">ID</label>
+                <input type="text" class="form-control" id="eeId" name="eeId" value="{{updateRecord['eeId']}}" readonly>
+            </div>
+            <div class="col">
+                <label for="eeFirstName">First name</label>
+
+                <input type="text" class="form-control" id="eeFirstName" name="eeFirstName" value="{{updateRecord['eeFirstName']}}" required>
+            </div>
+            <div class="col">
+                <label for="eeLastName">Last name</label>
+                <input type="text" class="form-control" id="eeLastName" name="eeLastName" value="{{updateRecord['eeLastName']}}" required>
+            </div>
+        {#  Otherwise, blank values when called to create  #}
+        {% else %}
+            <div class="col">
+                <input type="text" class="form-control" id="eeFirstName" name="eeFirstName" placeholder="First Name" required>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="eeLastName" name="eeLastName" placeholder="Last Name" required>
+            </div>
+        {% endif %}
+    </div>
+    {#  NOTE: nice if we could get one of these to auto-select based on updateRecord - leaving it outside conditional for now  #}
+    <div class="form-row">
+        <div class="col-5">
+        <label for="eePosition">Employee position</label>
+        <select class="custom-select" name="eePosition" id="eePosition" required>
+            <option value="" disabled selected>Choose position</option>
+            <option value="Sales Associate">Sales Associate</option>
+            <option value="Floor Manager">Floor Manager</option>
+            <option value="Mechanic">Mechanic</option>
+            <option value="General Manager">General Manager</option>
+        </select> 
+        </div>
+        <div class="col-5">
+        <label for="eeStatus">Employment status</label>
+        <select class="custom-select" name="eeStatus" id="eeStatus" required>
+            <option value="" disabled selected>Is employee current or former?</option>
+            <option value="1">Current</option>
+            <option value="2">Former</option>
+        </select> 
+        </div>
+    </div>
+    {# on update pre-select dropdown options #}
+    {% if operation == "update" %}
+        <script>
+            function eeSelect(){eeUpdateSelect({{updateRecord}})};
+            window.onload=eeSelect;
+        </script>
+
+    {% endif %}
+    <div class="form-row">
+        <button type="submit" class="btn btn-outline-primary">Submit</button>
+    </div>
+{#  below tag closes form referenced in createUpdateHeading  #}
+</form>
+{% endset %}
+
+{#  2.2 Create / Update customer form --!> 
+{# ---------------------------------------------- #}
+{% set createUpdateCustomersForm %}
+    <div class="form-row">
+    {#  Pre-fill values when called to update  #}
+    {% if operation == "update" %}
+        <div class="col-2">
+        <label for="customerId">ID</label>
+        <input type="text" class="form-control" id="customerId" name="customerId" value="{{updateRecord['customerId']}}" readonly>
+        </div>
+        <div class="col">
+        <label for="customerFirstName">First name</label>
+        <input type="text" class="form-control" id="customerFirstName" name="customerFirstName" value="{{updateRecord['customerFirstName']}}" required>
+        </div>
+        <div class="col">
+        <label for="customerLastName">Last name</label>
+        <input type="text" class="form-control" id="customerLastName" name="customerLastName" value="{{updateRecord['customerLastName']}}" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="col-5">
+        <label for="customerEmail">Email</label>
+        <input type="text" class="form-control" id="customerEmail" name="customerEmail" value="{{updateRecord['customerEmail']}}" required>
+        </div>
+        <div class="col-5">
+        <label for="membershipStatus">Membership status</label>
+        <select class="custom-select" name="membershipStatus" id="membershipStatus" required>
+            <option value="">Is customer a member?</option>
+            <option value="1">Yes</option>
+            <option value="0">No</option>
+        </select> 
+        </div>
+    </div>
+    {# on update pre-select dropdown options #}
+    {% if operation == "update" %}
+        <script>
+            {# Note: membershipStatus passed directly #}
+            function membershipStatusSelect(){customerUpdateSelect(  "{{updateRecord['membershipStatus']}}"  ) }; 
+            window.onload=membershipStatusSelect;
+        </script>
+    {% endif %}
+    <div class="form-row">
+        <button type="submit" class="btn btn-outline-primary">Submit</button>
+    </div>
+    
+    {#  Otherwise, blank values when called to create  #}
+    {% else %}
+        <div class="col">
+        <input type="text" class="form-control" id="customerFirstName" name="customerFirstName" placeholder="First Name" required>
+        </div>
+        <div class="col">
+        <input type="text" class="form-control" id="customerLastName" name="customerLastName" placeholder="Last Name" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="col-5">
+        <input type="text" class="form-control" id="customerEmail" name="customerEmail" placeholder="Email" >
+        </div>
+        <div class="col-5">
+        <select class="custom-select" name="membershipStatus" id="membershipStatus" required>
+            <option value="">Is customer a member?</option>
+            <option value="1">Yes</option>
+            <option value="0">No</option>
+            </select> 
+        </div>
+    </div>
+    <div class="form-row">
+        <button type="submit" class="btn btn-outline-primary">Submit</button>
+    </div>
+    {% endif %}
+
+{#  below tag closes form referenced in createUpdateHeading  #}
+</form>
+{% endset %}
+
+{#  2.3 Create / Update purchases form #} 
+{# ---------------------------------------------- #}
+{% set createUpdatePurchasesForm %}
+{#  Pre-fill values when called to update  #}
+{% if operation == "update" %}
+    <div class="form-row">
+        <div class="col-3">
+            <label for="purchaseId">ID</label>
+            <input type="text" class="form-control" id="purchaseId" name="purchaseId" value="{{updateRecord['purchaseId']}}" readonly>
+        </div>
+        <div class="col-4">
+            <label for="purchaseDate">Purchase date</label>
+            <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" value="{{updateRecord['purchaseDate']}}" required>
+        </div>
+    </div>
+    <div class="form-row">
+
+        <div class="col-3">
+            <label for="customerId">Customer ID</label>
+            <input type="text" class="form-control" id="customerId" name="customerId" value="{{updateRecord['customerId']}}" required>
+        </div>
+        <div class="col-3">
+            <label for="eeId">Employee ID</label>
+            <input type="text" class="form-control" id="eeId" name="eeId" value="{{updateRecord['eeId']}}">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="col-5">
+            <label for="creditCardNumb">Credit Card Number</label>
+            <input type="text" class="form-control" id="creditCardNumb" name="creditCardNumb" pattern="[0-9]{16}" title="16 digit credit card number" value="{{updateRecord['creditCardNumb']}}" umber" required>
+        </div>
+        <div class="col-2">
+            <label for="creditCardExp">Expires</label>
+            <input type="text" class="form-control" id="creditCardExp" name="creditCardExp" pattern="[0-9]{4}" title="Credit card expiration in MMYY format" value="{{updateRecord['creditCardExp']}}" ired>
+            <small id="creditCardExpHelp" class="form-text text-muted">MMYY</small>
+        </div>
+        <div class="col-3">
+            <label for="costOfSale">Cost of sale</label>
+            <input type="number" min="0.00" step="0.01" class="form-control" id="costOfSale" name="costOfSale" value="{{updateRecord['costOfSale']}}"  required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="alert alert-info" role="alert" style="max-width: 600px">
+            <b>Note:</b> Click "Add Items" to add new items. Enter Item ID and Item Quantity. Entering an Item Quantity of "0" for an existing item will delete it. Click "Start Over" to clear your edits. 
+        </div>
+    </div>
+    {# edit/add items #}
+    {{ addEditItemsContainer }}
+        
+    {#  Otherwise, blank values when called to create  #}
+    {% else %}
+        <div class="form-row">
+            <div class="col-4">
+                <label for="purchaseDate">Purchase date</label>
+                <input type="date" class="form-control" id="purchaseDate" name="purchaseDate" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-4">
+                <select class="form-control" id="customerId" name="customerId" value="customerId" required>
+                    <option value="" disabled selected>Select Customer ID</option>
+                    {% for i in formPrefillData['customerIds'] %} 
+                        <option> {{i['customerId']}} </option>
+                    {% endfor %}
+                </select>   
+                <small id="customerIdHelpBlock" class="form-text text-muted">
+                Click <a href="/customers/create">here</a> to create new Customer.
+                </small>
+            </div>
+            <div class="col-4">
+                <select class="form-control" id="eeId" name="eeId" value="eeId">
+                    <option value="" disabled selected>Select Employee ID</option>
+                    <option value="">None / Self Checkout</option>
+                    {% for i in formPrefillData['eeIds'] %} 
+                        <option> {{i['eeId']}} </option>
+                    {% endfor %}
+                </select>   
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-5">
+                <input type="text" class="form-control" id="creditCardNumb" name="creditCardNumb" pattern="[0-9]{16}" title="16 digit credit card number" placeholder="Credit card number" required>
+            </div>
+            <div class="col-2">
+                <input type="text" class="form-control" id="creditCardExp" name="creditCardExp" pattern="[0-9]{4}" title="Credit card expiration in MMYY format" placeholder="Expires" required>
+                <small id="creditCardExpHelp" class="form-text text-muted">MMYY</small>
+            </div>
+            <div class="col-3">
+                <input type="number" min="0.00" step="0.01" class="form-control" id="costOfSale" name="costOfSale" placeholder="Cost of sale" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="alert alert-info" role="alert" style="max-width: 600px">
+                <b>Note:</b> Click "Add Items" to add a line for each new item category. Then input Item ID and quantity purchased. Click "Start Over" to clear this form. 
+            </div>
+        </div>
+        {# add items #}
+        {{ addEditItemsContainer }}
+
+    {% endif %}
+
+{#  below tag closes form referenced in createUpdateHeading  #}
+</form>
+{% endset %}
+
+{#  2.4 Create / Update items form #} 
+{# ---------------------------------------------- #}
+{% set createUpdateItemsForm %}
+    {#  Pre-fill values when called to update  #}
+    {% if operation == "update" %}
+        <div class="form-row">
+            <div class="col-3">
+                <label for="itemId">ID</label>
+                <input type="text" class="form-control" id="itemId" name="itemId" value="{{updateRecord['itemId']}}"  readonly>
+            </div>
+            <div class="col-4">
+                <label for="itemName">Item name</label>
+                <input type="text" class="form-control" id="itemName" name="itemName" value="{{updateRecord['itemName']}}"  required>
+            </div>
+            <div class="col-3">
+                <label for="itemPrice">Price</label>
+                <input type="number" min="0.00" step="0.01" class="form-control" id="itemPrice" name="itemPrice" value="{{updateRecord['itemPrice']}}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-9">
+                <label for="itemDescription">Description</label>
+                <input type="text" class="form-control" id="itemDescription" name="itemDescription" value="{{updateRecord['itemDescription']}}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            {#  NOTE: nice if we could get one of these to auto-select based on updateRecord - leaving it outside conditional for now  #}
+            <div class="col-5">
+            <label for="itemType">Item type</label>
+            <select class="form-control" id="itemType" name="itemType" value="itemType" required>
+                <option value="" disabled selected>Select item type</option>
+                <option>Mountain Bike</option>
+                <option>Road Bike</option>
+                <option>Accessory</option>
+                <option>Apparel</option>
+            </select>              
+            </div>
+            {# on update pre-select dropdown options #}
+            {% if operation == "update" %}
+                <script>
+                    {# Note: itemType passed directly #}
+                    function itemTypeSelect(){itemUpdateSelect(  "{{updateRecord['itemType']}}"  ) }; 
+                    window.onload=itemTypeSelect;
+                </script>
+            {% endif %}
+            <div class="col-3">
+                <label for="inventoryOnHand">Inventory</label>
+                <input type="number" min="1" step="1" class="form-control" id="inventoryOnHand" name="inventoryOnHand" value="{{updateRecord['inventoryOnHand']}}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <button type="submit" class="btn btn-outline-primary">Submit</button>
+        </div>
+
+    {#  Otherwise, blank values when called to create  #} 
+    {% else %}
+    <div class="form-row">
+        <div class="col-4">
+        <input type="text" class="form-control" id="itemName" name="itemName" placeholder="Item name" required>
+        </div>
+        <div class="col-3">
+            <input type="number" min="0.00" step="0.01" class="form-control" id="itemPrice" name="itemPrice" placeholder="Item price" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="col-9">
+        <input type="text" class="form-control" id="itemDescription" name="itemDescription" placeholder="Item description" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="col-5">
+        <select class="form-control" id="itemType" name="itemType" value="itemType" required>
+            <option value="" disabled selected>Select item type</option>
+            <option>Mountain Bike</option>
+            <option>Road Bike</option>
+            <option>Accessory</option>
+            <option>Apparel</option>
+        </select>              
+        </div>
+        <div class="col-3">
+            <input type="number" min="1" step="1" class="form-control" id="inventoryOnHand" name="inventoryOnHand" placeholder="Inventory on hand" required>
+        </div>
+    </div>
+    <div class="form-row">
+        <button type="submit" class="btn btn-outline-primary">Submit</button>
+    </div>
+    {% endif %}
+
+{#  below tag closes form referenced in createUpdateHeading  #}
+</form>
+{% endset %}
+
+
+{#  3. Render the relevant create/update form  #}
+{# ---------------------------------------------- #}
+{% block content %}
+{#  Page heading  #}
+<div> 
+    <h2>{{dbEntity.capitalize()}}</h2>
+    <hr> 
+
+{#  4. Create / update new dbEntity  #}
+{# ---------------------------------------------- #}
+{% if created == False or updated == False %}
+{{ createUpdateHeading}}
+    {% if dbEntity == "employees" %}
+        {{ createUpdateEmployeesForm }}
+    {% elif dbEntity == "customers" %}
+        {{ createUpdateCustomersForm }}
+    {% elif dbEntity == "purchases" %}
+        {{ createUpdatePurchasesForm }}
+    {% elif dbEntity == "items" %}
+        {{ createUpdateItemsForm }}
+    {% endif %}
+
+{#  5. Confirm new dbEntity created / updated  #}
+{# ---------------------------------------------- #}
+{% elif created == True or updated == True %}
+    <h3>{{dbEntity[:-1].capitalize()}} successfully {{operation}}d.</h3>
+    <br>
+    {% for i in data.keys() %}
+    <p><b>{{i}}:</b> {{data[i]}}</p>
+    {% endfor %}
+    <br>
+    <a href="/{{dbEntity}}" class="btn btn-outline-primary">Return to search</a> <a href="/{{dbEntity}}/create" class="btn btn-outline-primary">Return to create</a>
+{% endif %}
+
+</div>
+{% endblock %}
+
